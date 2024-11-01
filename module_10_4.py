@@ -1,4 +1,3 @@
-import queue
 from threading import Thread
 import random
 from queue import Queue
@@ -16,37 +15,41 @@ class Guest(Thread):
         super().__init__()
         self.name = name
 
-
     def run(self):
         sleep(random.randint(3, 10))
 
 
 class Cafe:
     def __init__(self, *tables):
-        self.table = tables
+        self.tables = tables
+        self.queue = Queue()
 
     def guest_arrival(self, *guests):
-        g_list = guests[0]
-        for j in range(len(g_list)):
-            for i in range(len(tables)):
-                if tables[i].guest is None:
-                    tables[i].guest = g_list[j].name
-                    g_list[j].start()
-                    print(f'{g_list[j].name} сел(-а) за стол номер {tables[i].number}')
+        for guest in guests[0]:
+            for table in self.tables:
+                if table.guest is None:
+                    table.guest = guest
+                    guest.start()
+                    print(f'{table.guest.name} сел(-а) за стол номер {table.number}')
+                    break
+                if all([table.guest for table in self.tables]):
+                    self.queue.put(guest)
+                    print(guest.name, 'в очереди')
                     break
 
-                if i == len(tables) - 1 and tables[i].guest != g_list[j].name:
-                    Queue.put(q, g_list[j])
-                    print(g_list[j].name, 'в очереди')
-
     def discuss_guests(self):
-        if Queue.empty(q) is False:
-            print('Не пустая')
-        if [Guest.is_alive(name) for name in guests] is False:
-            print('Ушёл')
+        while not self.queue.empty() or any([table.guest for table in self.tables]):
+            for table in self.tables:
+                if table.guest is not None and not table.guest.is_alive():
+                    print(f'{table.guest.name} покушал(-а) и ушёл(ушла) и '
+                          f'Стол номер {table.number} свободен')
+                    table.guest = None
+                if not self.queue.empty() and table.guest is None:
+                    table.guest = self.queue.get()
+                    print(f'{table.guest.name} вышел(-ла) из очереди и сел(-а) за стол номер {table.number}')
+                    table.guest.start()
 
 
-q = queue.Queue()
 tables = [Table(number) for number in range(1, 6)]
 guests_names = ['Maria', 'Oleg', 'Vakhtang', 'Sergey', 'Darya', 'Arman', 'Vitoria', 'Nikita', 'Galina',
                 'Pavel', 'Ilya', 'Alexandra']
